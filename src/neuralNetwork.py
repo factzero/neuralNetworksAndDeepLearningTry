@@ -2,11 +2,21 @@ import mnist_loader
 import random
 import numpy as np
 
+class CrossEntropyCost(object):
+    @staticmethod
+    def fn(a, y):
+        return np.sum(np.nan_to_num(-y*np.log(a)-(1-y)*np.log(1-a)))
+
+    @staticmethod
+    def delta(z, a, y):
+        return (a-y)
+
 class NNetwork(object):
-    def __init__(self, sizes):
+    def __init__(self, sizes, cost=CrossEntropyCost):
         self.num_layers = len(sizes)
         self.sizes = sizes
         self.default_wb_init()
+        self.cost = cost
 
     def default_wb_init(self):
         self.biases = [np.random.randn(y, 1) for y in self.sizes[1:]]
@@ -52,7 +62,7 @@ class NNetwork(object):
             zs.append(z)
             activation = sigmoid(z)
             activations.append(activation)
-        delta = self.cost_derivative(activations[-1], y)*sigmoid_prime(zs[-1])
+        delta = (self.cost).delta(zs[-1], activations[-1], y)
         nabla_b[-1] = delta
         nabla_w[-1] = np.dot(delta, activations[-2].transpose())
         for l in xrange(2, self.num_layers):
@@ -67,9 +77,6 @@ class NNetwork(object):
         test_res = [(np.argmax(self.feedforward(x)), y) for (x, y) in test_data]
         return sum(int(x == y) for (x, y) in test_res)
 
-    def cost_derivative(self, output_activations, y):
-        return (output_activations-y)
-
 def sigmoid(z):
     return 1.0/(1.0+np.exp(-z))
 
@@ -79,7 +86,7 @@ def sigmoid_prime(z):
 def test():
     print "trainig ............"
     training_data, validation_data, test_data = mnist_loader.load_data_wrapper()
-    net = NNetwork([784, 30, 10])
+    net = NNetwork([784, 30, 10], cost=CrossEntropyCost)
     net.SGD(training_data, 30, 10, 0.5, evaluation_data=test_data)
 
 if __name__ == "__main__":
